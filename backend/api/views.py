@@ -42,16 +42,36 @@ def register(request):
         }, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-@api_view(['GET'])
+@api_view(['GET', 'PUT', 'PATCH'])
 @permission_classes([IsAuthenticated])
 def profile_view(request):
     try:
         profile = request.user.profile
+        
+        if request.method in ['PUT', 'PATCH']:
+            # Handle user basic info update
+            if 'first_name' in request.data:
+                request.user.first_name = request.data['first_name']
+                request.user.save()
+            
+            # Update profile fields
+            serializer = UserProfileSerializer(profile, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response({
+                    'message': 'Profile updated successfully',
+                    'profile': serializer.data,
+                    'username': request.user.username
+                })
+            return Response(serializer.errors, status=400)
+            
+        # GET request
         serializer = UserProfileSerializer(profile)
         reports = CropReportSerializer(request.user.reports.all().order_by('-created_at')[:5], many=True).data
         return Response({
             'profile': serializer.data, 
             'username': request.user.username,
+            'first_name': request.user.first_name,
             'recent_reports': reports
         })
     except UserProfile.DoesNotExist:

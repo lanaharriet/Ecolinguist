@@ -5,9 +5,40 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     location = models.CharField(max_length=255, blank=True, null=True)
     crops = models.CharField(max_length=512, blank=True, null=True, help_text="Comma-separated list of crops")
+    
+    # Enhanced Profile Fields
+    farmer_type = models.CharField(max_length=100, blank=True, null=True)
+    land_size = models.FloatField(blank=True, null=True, help_text="Land size in acres")
+    main_crops = models.CharField(max_length=255, blank=True, null=True)
+    irrigation_type = models.CharField(max_length=100, blank=True, null=True)
+    income_range = models.CharField(max_length=100, blank=True, null=True)
+    preferred_language = models.CharField(max_length=50, default='English')
+    farming_experience = models.IntegerField(blank=True, null=True, help_text="Years of experience")
 
     def __str__(self):
         return f"{self.user.username}'s Profile"
+
+class ClimateReport(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='climate_reports')
+    file_name = models.CharField(max_length=255)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    parsed_content = models.TextField(blank=True, null=True)
+    vector_id = models.CharField(max_length=100, blank=True, null=True)
+    
+    def __str__(self):
+        return f"{self.file_name} uploaded by {self.user.username}"
+
+class ImageAnalysisResult(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='image_analyses')
+    image = models.ImageField(upload_to='crop_images/', blank=True, null=True)
+    crop_detected = models.CharField(max_length=100, blank=True, null=True)
+    health_status = models.CharField(max_length=100, blank=True, null=True)
+    diseases_detected = models.TextField(blank=True, null=True)
+    ai_recommendation = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.crop_detected} analysis for {self.user.username}"
 
 class CropReport(models.Model):
     STATUS_CHOICES = [
@@ -32,6 +63,8 @@ class Scheme(models.Model):
     title = models.CharField(max_length=255)
     location = models.CharField(max_length=100, blank=True, null=True, help_text="Applicable region")
     crop = models.CharField(max_length=100, blank=True, null=True, help_text="Applicable crop")
+    target_farmer_type = models.CharField(max_length=100, blank=True, null=True)
+    max_land_size = models.FloatField(blank=True, null=True)
     benefits = models.TextField()
     eligibility = models.TextField()
     how_to_apply = models.TextField()

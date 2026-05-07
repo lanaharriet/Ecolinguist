@@ -15,7 +15,8 @@ api.interceptors.request.use((config) => {
 export const login = (data) => api.post('/auth/token', data);
 export const register = (data) => api.post('/auth/register', data);
 
-export const getProfile = () => api.get(`/profile`);
+export const getProfile = () => api.get(`/profile/`);
+export const updateProfile = (data) => api.patch(`/profile/`, data);
 export const getWeather = (lat, lon) => api.get(`/weather?lat=${lat}&lon=${lon}`);
 export const getSchemes = () => api.get('/schemes');
 export const getResources = () => api.get('/resources');

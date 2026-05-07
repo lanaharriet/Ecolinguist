@@ -1,10 +1,14 @@
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Add root directory to sys path so we can import ml folder
+sys.path.append(str(BASE_DIR.parent))
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-default')
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
