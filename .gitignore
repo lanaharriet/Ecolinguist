@@ -11,6 +11,7 @@ staticfiles/
 # Environment Variables
 .env
 .env.local
+.gemini_key
 
 # Node.js
 node_modules/

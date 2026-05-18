@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-do
 import { 
   Home, FileText, Camera, MapPin, User as UserIcon, Bell, 
   Sprout, CloudRain, Sun, Settings, LogOut, Moon, Activity,
-  ShieldCheck, FileCheck, ArrowRight, AlertTriangle, Play, Info
+  ShieldCheck, FileCheck, ArrowRight, AlertTriangle, Play, Info, Search
 } from 'lucide-react';
 import PDFChatPage from './pages/PDFChatPage';
 import ImageAnalysisPage from './pages/ImageAnalysisPage';
@@ -16,9 +16,27 @@ import VoiceAssistant from './components/voice/VoiceAssistant';
 import { getProfile, getSchemes } from './services/api';
 
 // Weather Widget Component
-function WeatherWidget({ location }) {
-  const [weather, setWeather] = useState({ temp: '28°C', condition: 'Partly Cloudy' });
+function WeatherWidget({ globalLocation }) {
+  const [weather, setWeather] = useState({ temp: '...', condition: '...' });
   
+  useEffect(() => {
+    if (!globalLocation) return;
+    fetch(`http://localhost:8000/api/weather?lat=${globalLocation.lat}&lon=${globalLocation.lon}`)
+      .then(res => res.json())
+      .then(data => {
+        setWeather({ temp: `${data.temperature}°C`, condition: data.condition || 'Clear' });
+      })
+      .catch(console.error);
+  }, [globalLocation]);
+
+  if (!globalLocation) {
+    return (
+      <div className="flex items-center gap-3 px-4 py-2 bg-black/5 dark:bg-black/20 rounded-full border border-primary/20 backdrop-blur-md">
+        <span className="text-xs font-bold text-primary tracking-wide uppercase">Set Location to view Weather ➔</span>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-center gap-3 px-4 py-2 bg-black/5 dark:bg-black/20 rounded-full border border-black/5 dark:border-white/5 backdrop-blur-md transition-all hover:bg-black/10 dark:hover:bg-black/30">
       <div className="text-primary animate-float">
@@ -165,7 +183,7 @@ function QuickActionsWidget() {
 }
 
 // Main Dashboard
-function Dashboard({ profileData, schemes }) {
+function Dashboard({ profileData, schemes, globalLocation }) {
   const name = profileData?.first_name || profileData?.username || 'Farmer';
   const crops = profileData?.profile?.main_crops;
 
@@ -173,7 +191,7 @@ function Dashboard({ profileData, schemes }) {
     <div className="max-w-7xl mx-auto animate-slide-up space-y-8">
       <div className="flex flex-col gap-2">
         <h1 className="text-4xl font-bold text-foreground tracking-tight">EcoLinguist Command Center</h1>
-        <p className="text-lg text-muted-foreground">Welcome back, {name}. Here is your AI agricultural overview.</p>
+        <p className="text-lg text-muted-foreground">Welcome back, {name}. {globalLocation ? `AI overview for ${globalLocation.name}.` : 'Please search for a location to begin.'}</p>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -249,26 +267,66 @@ function BottomNav() {
   );
 }
 
-function Navbar({ toggleTheme, isDark, profileData }) {
+function Navbar({ toggleTheme, isDark, profileData, globalLocation, setGlobalLocation }) {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [search, setSearch] = useState('');
   const name = profileData?.first_name || profileData?.username || 'User';
   const initial = name.charAt(0).toUpperCase();
-  const location = profileData?.profile?.location || 'Set Location';
+
+  // Set initial search value once profile loads if we want, but globalLocation is better
+  useEffect(() => {
+    if (globalLocation && !search) {
+      setSearch(globalLocation.name);
+    }
+  }, [globalLocation]);
+
+  const handleLocationSearch = async (e) => {
+    e.preventDefault();
+    if (!search.trim()) return;
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(search)}&format=json&limit=1`);
+      const data = await res.json();
+      if (data && data.length > 0) {
+        setGlobalLocation({
+          name: data[0].display_name.split(',')[0],
+          lat: parseFloat(data[0].lat),
+          lon: parseFloat(data[0].lon)
+        });
+      } else {
+        alert("Location not found");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   return (
     <div className="h-20 glass-navbar px-4 md:px-8 flex items-center justify-between z-30 sticky top-0">
       <div className="flex items-center gap-2 text-muted-foreground font-medium text-sm md:text-base">
-        <MapPin size={18} className="text-primary hidden md:block" />
-        <span className="hidden md:block">{location}</span>
         
         {/* Mobile Header branding */}
-        <div className="md:hidden flex items-center gap-2 text-foreground font-bold text-xl">
-          <Sprout size={20} className="text-primary" /> EcoLinguist
+        <div className="md:hidden flex items-center gap-2 text-foreground font-bold text-xl mr-2">
+          <Sprout size={20} className="text-primary" />
         </div>
+
+        {/* Location Search Bar */}
+        <form onSubmit={handleLocationSearch} className="relative hidden md:flex items-center">
+          <MapPin size={16} className="absolute left-3 text-primary" />
+          <input 
+            type="text" 
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search location..."
+            className="pl-9 pr-4 py-1.5 bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-full text-sm focus:outline-none focus:border-primary/50 text-foreground w-40 lg:w-56 transition-all"
+          />
+          <button type="submit" className="absolute right-2 text-muted-foreground hover:text-primary">
+            <Search size={14} />
+          </button>
+        </form>
       </div>
       
       <div className="flex items-center gap-4 md:gap-6">
-        <div className="hidden md:block"><WeatherWidget location={location} /></div>
+        <div className="hidden md:block"><WeatherWidget globalLocation={globalLocation} /></div>
         <div className="hidden md:block h-8 w-px bg-black/10 dark:bg-white/10"></div>
         
         <button className="relative text-muted-foreground hover:text-foreground transition-colors">
@@ -349,6 +407,7 @@ function App() {
   const [isDark, setIsDark] = useState(true);
   const [profileData, setProfileData] = useState(null);
   const [schemes, setSchemes] = useState([]);
+  const [globalLocation, setGlobalLocation] = useState(null);
   const isAuthenticated = !!localStorage.getItem('access_token');
 
   // Initialize theme from localStorage
@@ -368,6 +427,21 @@ function App() {
         .then(([pRes, sRes]) => {
           setProfileData(pRes.data);
           setSchemes(sRes.data);
+          // Set initial location from profile if available
+          if (pRes.data?.profile?.location) {
+             // Basic fetch just to set a good lat/lon initially if they have a profile location
+             fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(pRes.data.profile.location)}&format=json&limit=1`)
+              .then(r => r.json())
+              .then(data => {
+                if (data && data.length > 0) {
+                  setGlobalLocation({
+                    name: pRes.data.profile.location,
+                    lat: parseFloat(data[0].lat),
+                    lon: parseFloat(data[0].lon)
+                  });
+                }
+              }).catch(e => console.error(e));
+          }
         })
         .catch(err => console.error("Failed to fetch initial data", err));
     }
@@ -397,13 +471,13 @@ function App() {
         <div className="flex h-screen overflow-hidden font-sans bg-background text-foreground transition-colors duration-300">
           <Sidebar />
           <div className="flex-1 flex flex-col h-screen overflow-hidden relative">
-            <Navbar toggleTheme={toggleTheme} isDark={isDark} profileData={profileData} />
+            <Navbar toggleTheme={toggleTheme} isDark={isDark} profileData={profileData} globalLocation={globalLocation} setGlobalLocation={setGlobalLocation} />
             <main className="flex-1 overflow-y-auto p-4 md:p-8 pb-24 md:pb-8 relative z-0">
               <Routes>
-                <Route path="/" element={<Dashboard profileData={profileData} schemes={schemes} />} />
+                <Route path="/" element={<Dashboard profileData={profileData} schemes={schemes} globalLocation={globalLocation} />} />
                 <Route path="/pdf-chat" element={<PDFChatPage />} />
                 <Route path="/image-analysis" element={<ImageAnalysisPage />} />
-                <Route path="/resources" element={<MapResourcePage />} />
+                <Route path="/resources" element={<MapResourcePage globalLocation={globalLocation} />} />
                 <Route path="/create-profile" element={<CreateProfilePage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/schemes" element={<GovtSchemesPage />} />

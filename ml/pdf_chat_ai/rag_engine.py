@@ -30,9 +30,14 @@ def ask_pdf_question(question, language="English"):
         )
     elif "Kongu" in language:
         system_prompt += (
-            "\nYou must respond in an authentic rural Kongu Tamil or Kongu Tanglish style (English script). "
-            "Use colloquial terms like 'kanna', 'vivasayam', 'pathukonga', 'nalla irukku'. "
-            "Make it sound exactly like a friendly local farming expert from the Coimbatore/Erode region."
+            "\nYou must respond in an authentic rural Kongu Tamil dialect (Coimbatore/Erode region style). "
+            "CRITICAL INSTRUCTION: You MUST write the entire response using the English alphabet (Tanglish), NOT Tamil script. "
+            "For example, write 'Vannakam kanna, payir nalla irukku' instead of using Tamil letters."
+        )
+    elif language == "Malayalam":
+        system_prompt += (
+            "\nYou must respond in PURE MALAYALAM (Malayalam script). "
+            "Use formal yet accessible language suitable for a professional agricultural assistant."
         )
 
     try:

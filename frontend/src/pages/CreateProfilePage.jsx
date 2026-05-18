@@ -104,6 +104,7 @@ export default function CreateProfilePage() {
                 <option value="Tamil">Tamil</option>
                 <option value="Kongu Tanglish">Kongu Tanglish</option>
                 <option value="English">English</option>
+                <option value="Malayalam">Malayalam</option>
               </select>
             </div>
           </div>
@@ -121,7 +122,7 @@ export default function CreateProfilePage() {
               <input required name="location" onChange={handleChange} className="w-full bg-black/5 dark:bg-white/5 border border-border text-foreground rounded-lg px-4 py-2.5 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50" placeholder="e.g., Coimbatore, Tamil Nadu" />
             </div>
             
-            <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1">
                 <label className="block text-sm font-medium text-muted-foreground mb-1">Farmer Type</label>
                 <select name="farmer_type" onChange={handleChange} className="w-full bg-black/5 dark:bg-white/5 border border-border text-foreground rounded-lg px-4 py-2.5 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 appearance-none">

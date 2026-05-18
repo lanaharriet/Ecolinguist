@@ -17,6 +17,33 @@ from .voice.pipeline import transcribe_audio, generate_tts
 
 from rest_framework_simplejwt.tokens import RefreshToken
 
+def fetch_weather(lat, lon):
+    weather_data = {"temperature": 28, "condition": "Clear", "humidity": "50%"}
+    try:
+        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,weather_code"
+        res = requests.get(url, timeout=5)
+        if res.status_code == 200:
+            current = res.json().get('current', {})
+            if current:
+                weather_data['temperature'] = current.get("temperature_2m", 28)
+                weather_data['humidity'] = f"{current.get('relative_humidity_2m', 50)}%"
+                
+                code = current.get('weather_code', 0)
+                condition_map = {
+                    0: "Clear Sky",
+                    1: "Mainly Clear", 2: "Partly Cloudy", 3: "Overcast",
+                    45: "Fog", 48: "Depositing Rime Fog",
+                    51: "Light Drizzle", 53: "Moderate Drizzle", 55: "Dense Drizzle",
+                    61: "Slight Rain", 63: "Moderate Rain", 65: "Heavy Rain",
+                    71: "Slight Snow", 73: "Moderate Snow", 75: "Heavy Snow",
+                    80: "Slight Rain Showers", 81: "Moderate Rain Showers", 82: "Violent Rain Showers",
+                    95: "Thunderstorm", 96: "Thunderstorm with hail"
+                }
+                weather_data['condition'] = condition_map.get(code, "Unknown")
+    except Exception as e:
+        print("Weather API error:", e)
+    return weather_data
+
 def extract_pdf_data(file_obj):
     try:
         pdf_reader = PyPDF2.PdfReader(file_obj)
@@ -102,18 +129,9 @@ def generate_report(request):
     if 'document' in request.FILES:
         extracted_text = extract_pdf_data(request.FILES['document'])
 
-    # Weather Processing (Default mock values if API fails)
     lat = request.data.get('lat', 28.6139)
     lon = request.data.get('lon', 77.2090)
-    weather_data = {"temperature": 28, "condition": "Clear", "humidity": "50%"}
-    try:
-        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true"
-        res = requests.get(url, timeout=5)
-        if res.status_code == 200:
-            data = res.json().get('current_weather', {})
-            weather_data['temperature'] = data.get("temperature", 28)
-    except:
-        pass # rely on defaults
+    weather_data = fetch_weather(lat, lon)
     
     # Call AI Orchestrator
     ai_dict = orchestrate_crop_report(crop_type, condition, weather_data, extracted_text)
@@ -147,19 +165,8 @@ def get_report(request, pk):
 def get_weather(request):
     lat = request.query_params.get('lat', 28.6139)
     lon = request.query_params.get('lon', 77.2090)
-    try:
-        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current_weather=true"
-        res = requests.get(url, timeout=5)
-        if res.status_code == 200:
-            data = res.json().get('current_weather', {})
-            return Response({
-                "temperature": data.get("temperature", 28),
-                "condition": "Cloudy", # mapping weathercode omitted for brevity
-                "humidity": "60%" 
-            })
-    except:
-        pass
-    return Response({"temperature": 28, "condition": "Sunny", "humidity": "60%"})
+    weather_data = fetch_weather(lat, lon)
+    return Response(weather_data)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])

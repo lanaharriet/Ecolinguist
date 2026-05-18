@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Mic, X, Volume2, Square } from 'lucide-react';
+import { processVoice } from '../../services/api';
 
 export default function VoiceAssistant() {
   const [isOpen, setIsOpen] = useState(false);
@@ -7,26 +8,66 @@ export default function VoiceAssistant() {
   const [transcript, setTranscript] = useState('');
   const [response, setResponse] = useState('');
 
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
   const toggleAssistant = () => setIsOpen(!isOpen);
 
   const startListening = () => {
-    setIsListening(true);
-    setTranscript('Listening...');
-    setResponse('');
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Your browser does not support Speech Recognition. Please try Chrome.");
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'ta-IN'; 
+    recognition.interimResults = false;
     
-    // Mock processing for UI
-    setTimeout(() => {
-      setTranscript('Ennada weather intha maasam eppadi irukkum?');
+    recognition.onstart = () => {
+      setIsListening(true);
+      setTranscript('Listening...');
+      setResponse('');
+    };
+    
+    recognition.onresult = async (event) => {
+      const recognizedText = event.results[0][0].transcript;
+      setTranscript(recognizedText);
       setIsListening(false);
       
-      setTimeout(() => {
-        setResponse('Intha maasam nalla mazhai varum nu edhirparkalam. Vivasayathuku thevaiana uram potu veyyunga.');
-      }, 1500);
-    }, 2000);
+      try {
+        setResponse('Consulting AI...');
+        const res = await processVoice({ text: recognizedText });
+        const aiText = res.data.ai_text || res.data.response || 'Enna solla nu puriyala.';
+        setResponse(aiText);
+        speakText(aiText);
+      } catch (error) {
+        console.error(error);
+        setResponse('Mannikavum, network error.');
+      }
+    };
+    
+    recognition.onerror = (event) => {
+      setIsListening(false);
+      setTranscript('Sariyaga ketkavillai. Marubadiyum muyarchikkavum.');
+    };
+    
+    recognition.onend = () => setIsListening(false);
+    
+    recognition.start();
   };
 
   const stopListening = () => {
     setIsListening(false);
+  };
+  
+  const speakText = (text) => {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ta-IN';
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    setIsSpeaking(true);
+    window.speechSynthesis.speak(utterance);
   };
 
   return (
@@ -42,7 +83,7 @@ export default function VoiceAssistant() {
       {/* Assistant Modal */}
       {isOpen && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center animate-slide-up p-4">
-          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col h-[600px]">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col h-[600px] max-h-[90vh]">
             {/* Header */}
             <div className="bg-slate-900 text-white p-6 flex justify-between items-center">
               <div className="flex items-center gap-3">

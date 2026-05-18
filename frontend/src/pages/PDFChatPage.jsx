@@ -32,9 +32,15 @@ export default function PDFChatPage() {
         success: 'PDF super-a upload aayiduchu! Enna kekkanum nu sollunga?',
         error: 'PDF upload aagala. Innoru thadava try pannunga.',
         processing: 'AI kitta irunthu pathil varala.'
+      },
+      Malayalam: {
+        welcome: 'നമസ്കാരം! കാലാവസ്ഥാ റിപ്പോർട്ട് PDF അപ്‌ലോഡ് ചെയ്ത് എന്നോട് ചോദ്യങ്ങൾ ചോദിക്കാം.',
+        success: 'PDF വിജയകരമായി അപ്‌ലോഡ് ചെയ്തു! നിങ്ങൾക്ക് എന്താണ് അറിയേണ്ടത്?',
+        error: 'PDF അപ്‌ലോഡ് ചെയ്യാൻ കഴിഞ്ഞില്ല. ദയവായി വീണ്ടും ശ്രമിക്കുക.',
+        processing: 'AI-ൽ നിന്ന് പ്രതികരണം ലഭിക്കുന്നതിൽ പിശക്.'
       }
     };
-    return messages[lang][type] || messages['English'][type];
+    return messages[lang]?.[type] || messages['English'][type];
   };
 
   const [messages, setMessages] = useState([
@@ -65,7 +71,7 @@ export default function PDFChatPage() {
       return;
     }
     const recognition = new SpeechRecognition();
-    recognition.lang = language === 'English' ? 'en-IN' : 'ta-IN';
+    recognition.lang = language === 'English' ? 'en-IN' : language === 'Malayalam' ? 'ml-IN' : 'ta-IN';
     recognition.interimResults = false;
     
     recognition.onstart = () => setIsListening(true);
@@ -96,7 +102,7 @@ export default function PDFChatPage() {
 
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = language === 'English' ? 'en-IN' : 'ta-IN';
+    utterance.lang = language === 'English' ? 'en-IN' : language === 'Malayalam' ? 'ml-IN' : 'ta-IN';
     utterance.onend = () => setIsSpeaking(false);
     utterance.onerror = () => setIsSpeaking(false);
     
@@ -184,14 +190,14 @@ export default function PDFChatPage() {
   };
 
   return (
-    <div className="container mx-auto max-w-7xl h-[calc(100vh-100px)] flex flex-col animate-slide-up">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
+    <div className="container mx-auto max-w-7xl h-[calc(100vh-100px)] flex flex-col animate-slide-up px-4 md:px-0">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-3">
           <FileText className="text-primary" size={32} />
           Climate Intelligence
         </h1>
-        <div className="flex items-center gap-3 bg-black/5 dark:bg-[rgba(30,32,34,0.6)] backdrop-blur-md border border-black/5 dark:border-white/5 p-1 rounded-xl">
-          {['English', 'Tamil', 'Kongu Tanglish'].map(lang => (
+        <div className="flex items-center gap-2 md:gap-3 bg-black/5 dark:bg-[rgba(30,32,34,0.6)] backdrop-blur-md border border-black/5 dark:border-white/5 p-1 rounded-xl flex-wrap justify-center w-full md:w-auto">
+          {['English', 'Tamil', 'Kongu Tanglish', 'Malayalam'].map(lang => (
             <button 
               key={lang}
               onClick={() => setLanguage(lang)}
@@ -216,10 +222,10 @@ export default function PDFChatPage() {
             className="hidden"
             onChange={handleFileChange}
           />
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
             <label 
               htmlFor="pdf-upload" 
-              className="cursor-pointer bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-foreground px-8 py-3 rounded-xl font-medium transition-colors border border-black/5 dark:border-white/10"
+              className="cursor-pointer bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-foreground px-6 py-3 rounded-xl font-medium transition-colors border border-black/5 dark:border-white/10 text-center truncate max-w-full"
             >
               {file ? file.name : "Select PDF File"}
             </label>
@@ -227,10 +233,10 @@ export default function PDFChatPage() {
             <button 
               onClick={handleUpload}
               disabled={!file || uploading}
-              className="bg-primary hover:bg-emerald-500 text-primary-foreground px-8 py-3 rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="bg-primary hover:bg-emerald-500 text-primary-foreground px-6 py-3 rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 whitespace-nowrap"
             >
               {uploading ? <Loader2 className="animate-spin" size={20} /> : null}
-              {uploading ? 'Processing AI Embeddings...' : 'Analyze Document'}
+              {uploading ? 'Processing AI...' : 'Analyze Document'}
             </button>
           </div>
         </div>
@@ -316,9 +322,9 @@ export default function PDFChatPage() {
                 <button 
                   onClick={handleSend}
                   disabled={loading || !input.trim()}
-                  className="absolute right-2 top-2 bottom-2 bg-primary text-primary-foreground px-4 rounded-full hover:bg-emerald-500 transition-colors disabled:opacity-50 flex items-center justify-center shadow-lg"
+                  className="absolute right-2 top-2 bottom-2 bg-primary text-primary-foreground px-3 md:px-4 rounded-full hover:bg-emerald-500 transition-colors disabled:opacity-50 flex items-center justify-center shadow-lg"
                 >
-                  <Send size={18} className="ml-1" />
+                  <Send size={18} className="ml-0 md:ml-1" />
                 </button>
               </div>
             </div>

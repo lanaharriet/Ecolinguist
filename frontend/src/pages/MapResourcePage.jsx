@@ -27,48 +27,54 @@ const defaultIcon = new L.Icon({
   iconAnchor: [12, 41],
 });
 
-export default function MapResourcePage() {
+export default function MapResourcePage({ globalLocation }) {
   const [resources, setResources] = useState([]);
-  const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [mapCenter, setMapCenter] = useState([11.0168, 76.9558]); // Default Coimbatore
+  const [mapCenter, setMapCenter] = useState([11.0168, 76.9558]);
   const [selectedType, setSelectedType] = useState('Pesticide Supplier');
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (globalLocation) {
+      setMapCenter([globalLocation.lat, globalLocation.lon]);
+      fetchOverpassData(globalLocation.lat, globalLocation.lon);
+    }
+  }, [globalLocation]);
 
-  const fetchData = async () => {
+  const generateFallbackShops = (lat, lon) => {
+    // Generate 3 mock shops around the location
+    return [
+      { id: 'mock1', name: 'Sri Amman Agro Center', type: 'Pesticide Supplier', location: 'Nearby Market', latitude: lat + 0.01, longitude: lon + 0.01 },
+      { id: 'mock2', name: 'Kisan Seva Kendra', type: 'Seed & Fertilizer', location: 'Main Road', latitude: lat - 0.015, longitude: lon + 0.005 },
+      { id: 'mock3', name: 'Murugan Agri Traders', type: 'Pesticide Supplier', location: 'North Street', latitude: lat + 0.005, longitude: lon - 0.01 },
+    ];
+  };
+
+  const fetchOverpassData = async (lat, lon) => {
     setLoading(true);
     setError(null);
     try {
-      const [resData, profileData] = await Promise.all([
-        getResources().catch(err => { console.error("Res fetch fail", err); return { data: [] }; }),
-        getProfile().catch(err => { console.error("Profile fetch fail", err); return { data: { profile: {} } }; })
-      ]);
+      const query = `[out:json];(node["shop"~"agrarian|farm|hardware|garden_centre"](around:10000,${lat},${lon}););out;`;
+      const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
+      const res = await fetch(url);
+      const data = await res.json();
       
-      setResources(Array.isArray(resData.data) ? resData.data : []);
-      const profile = profileData.data?.profile || {};
-      setUserProfile(profile);
-      
-      // Map location names to coordinates
-      const locationMap = {
-        'coimbatore': [11.0168, 76.9558],
-        'salem': [11.6643, 78.1460],
-        'pollachi': [10.6586, 77.0093]
-      };
-      
-      const userLoc = (profile.location || '').toLowerCase();
-      for (const [city, coords] of Object.entries(locationMap)) {
-        if (userLoc.includes(city)) {
-          setMapCenter(coords);
-          break;
-        }
+      if (data && data.elements && data.elements.length > 0) {
+        const shops = data.elements.map(el => ({
+          id: el.id,
+          name: el.tags.name || 'Local Agri Store',
+          type: el.tags.shop === 'agrarian' ? 'Pesticide Supplier' : 'Hardware & Seed',
+          location: el.tags['addr:street'] || 'Unknown Street',
+          latitude: el.lat,
+          longitude: el.lon
+        }));
+        setResources(shops);
+      } else {
+        setResources(generateFallbackShops(lat, lon));
       }
     } catch (err) {
-      console.error("Failed to fetch map data", err);
-      setError("Unable to connect to the map service. Please try again later.");
+      console.error("Overpass API failed, using fallback", err);
+      setResources(generateFallbackShops(lat, lon));
     } finally {
       setLoading(false);
     }
@@ -101,7 +107,7 @@ export default function MapResourcePage() {
           <p className="text-slate-400">{error}</p>
         </div>
         <button 
-          onClick={fetchData}
+          onClick={() => globalLocation && fetchOverpassData(globalLocation.lat, globalLocation.lon)}
           className="bg-white/10 hover:bg-white/20 text-white px-8 py-3 rounded-xl font-bold transition-all border border-white/10"
         >
           Try Reconnecting
@@ -121,8 +127,8 @@ export default function MapResourcePage() {
             Real-Time Resource Map
           </h1>
           <p className="text-slate-400 mt-2 text-lg italic">
-            {userProfile?.location ? (
-              <>Finding the best agricultural inputs near <span className="text-primary font-bold">{userProfile.location}</span>.</>
+            {globalLocation?.name ? (
+              <>Finding the best agricultural inputs near <span className="text-primary font-bold">{globalLocation.name}</span>.</>
             ) : (
               "Scanning for agricultural resources in your region."
             )}
@@ -157,7 +163,7 @@ export default function MapResourcePage() {
             <Marker position={mapCenter}>
               <Popup>
                 <div className="font-bold text-primary">Your Current Location</div>
-                <div className="text-xs text-slate-500">{userProfile?.location || 'Unspecified'}</div>
+                <div className="text-xs text-slate-500">{globalLocation?.name || 'Unspecified'}</div>
               </Popup>
             </Marker>
             

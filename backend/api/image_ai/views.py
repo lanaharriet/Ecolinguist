@@ -13,17 +13,18 @@ class CropAnalysisView(APIView):
     def post(self, request, *args, **kwargs):
         file = request.FILES.get('file')
         language = request.data.get('language', 'English')
+        query = request.data.get('query', None)
+        filename = request.data.get('filename', '')
         
         if not file:
             return Response({'error': 'No image provided'}, status=status.HTTP_400_BAD_REQUEST)
         
+        import base64
         try:
-            # In a real app, save the file temporarily or to S3
-            # file_path = save_temp_file(file)
-            file_path = "mock_path.jpg"
+            image_b64 = base64.b64encode(file.read()).decode('utf-8')
             
             # Run the ML Orchestrator pipeline
-            results = orchestrator_instance.analyze_crop_image(file_path, language)
+            results = orchestrator_instance.analyze_crop_image(image_b64, language, query, filename)
             
             return Response({
                 'message': 'Analysis complete',

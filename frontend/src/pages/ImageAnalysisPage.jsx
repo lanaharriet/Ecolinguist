@@ -10,6 +10,7 @@ export default function ImageAnalysisPage() {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [language, setLanguage] = useState('English');
+  const [chatInput, setChatInput] = useState('');
 
   const getLocalizedMessage = (type, lang) => {
     const messages = {
@@ -42,12 +43,23 @@ export default function ImageAnalysisPage() {
         changeBtn: 'Photo-va mathunga',
         analyzeBtn: 'AI kitta katti kelunga',
         analyzing: 'AI check pannittu irukku...',
-        analyzingSub: 'Namma LLaMA 70B kitta kettu solluraen...',
+        analyzingSub: 'Namma LLaMA 90B kitta kettu solluraen...',
         placeholder: 'Oru photo upload panni check panni paarunga.',
         diagnosis: 'AI Assessment'
+      },
+      Malayalam: {
+        title: 'വിള & മണ്ണ് ചിത്ര വിശകലനം',
+        subtitle: 'തൽക്ഷണ AI ആരോഗ്യ വിവരങ്ങൾക്കായി നിങ്ങളുടെ വിളയുടെയോ മണ്ണിന്റെയോ ചിത്രം അപ്‌ലോഡ് ചെയ്യുക.',
+        uploadBtn: 'ക്യാമറ / ഗാലറി തുറക്കുക',
+        changeBtn: 'ചിത്രം മാറ്റുക',
+        analyzeBtn: 'AI-യോട് ചോദിക്കുക',
+        analyzing: 'AI നിങ്ങളുടെ ചിത്രം വിശകലനം ചെയ്യുന്നു...',
+        analyzingSub: 'സവിശേഷതകൾ വേർതിരിച്ച് LLaMA 90B യുമായി ബന്ധപ്പെടുന്നു.',
+        placeholder: 'വിവരങ്ങൾ കാണാൻ ഒരു ചിത്രം അപ്‌ലോഡ് ചെയ്യുക.',
+        diagnosis: 'AI വിലയിരുത്തൽ'
       }
     };
-    return messages[lang][type] || messages['English'][type];
+    return messages[lang]?.[type] || messages['English'][type];
   };
 
   const startListening = () => {
@@ -106,7 +118,11 @@ export default function ImageAnalysisPage() {
     
     const formData = new FormData();
     formData.append('file', image);
+    formData.append('filename', image.name);
     formData.append('language', language);
+    if (chatInput.trim()) {
+      formData.append('query', chatInput);
+    }
     
     try {
       const res = await axios.post('http://localhost:8000/api/image/analyze/', formData, {
@@ -130,22 +146,23 @@ export default function ImageAnalysisPage() {
       });
     } finally {
       setAnalyzing(false);
+      setChatInput('');
     }
   };
 
   return (
     <div className="container mx-auto p-4 animate-slide-up">
-      <div className="flex justify-between items-start mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2">
             <Camera className="text-primary" size={32} />
             {getLocalizedMessage('title', language)}
           </h1>
           <p className="text-muted-foreground mt-2">{getLocalizedMessage('subtitle', language)}</p>
         </div>
         
-        <div className="flex items-center gap-2 bg-black/5 dark:bg-[rgba(30,32,34,0.6)] backdrop-blur-md border border-black/5 dark:border-white/5 p-1 rounded-xl">
-          {['English', 'Tamil', 'Kongu Tanglish'].map(lang => (
+        <div className="flex flex-wrap items-center gap-2 bg-black/5 dark:bg-[rgba(30,32,34,0.6)] backdrop-blur-md border border-black/5 dark:border-white/5 p-1 rounded-xl w-full md:w-auto overflow-x-auto">
+          {['English', 'Tamil', 'Kongu Tanglish', 'Malayalam'].map(lang => (
             <button 
               key={lang}
               onClick={() => setLanguage(lang)}
@@ -186,7 +203,7 @@ export default function ImageAnalysisPage() {
               <div className="relative flex-1 bg-black rounded-xl overflow-hidden mb-4">
                 <img src={preview} alt="Crop Preview" className="w-full h-full object-contain" />
               </div>
-              <div className="flex gap-4">
+              <div className="flex flex-col sm:flex-row gap-4">
                 <input 
                   type="file" 
                   accept="image/*" 
@@ -196,29 +213,30 @@ export default function ImageAnalysisPage() {
                 />
                 <label 
                   htmlFor="image-upload-change" 
-                  className="cursor-pointer flex-1 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-foreground py-3 rounded-lg font-medium transition-colors text-center border border-border flex items-center justify-center"
+                  className="cursor-pointer flex-1 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-foreground py-3 rounded-lg font-medium transition-colors text-center border border-border flex items-center justify-center whitespace-nowrap px-4"
                 >
                   {getLocalizedMessage('changeBtn', language)}
                 </label>
-                <button 
-                  onClick={startListening}
-                  className={`bg-black/5 dark:bg-white/5 py-3 px-4 rounded-lg font-medium transition-colors border border-border flex items-center justify-center ${isListening ? 'text-red-500 bg-red-500/10 animate-pulse' : 'text-muted-foreground hover:bg-black/10 dark:hover:bg-white/10 hover:text-primary'}`}
-                  title={isListening ? "Listening..." : "Speak query (Tamil supported)"}
-                >
-                  <Mic size={20} />
-                </button>
-                <button 
-                  onClick={analyzeImage}
-                  disabled={analyzing}
-                  className="flex-1 bg-primary hover:bg-emerald-600 text-primary-foreground py-3 rounded-lg font-bold transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] disabled:opacity-50 flex justify-center items-center gap-2"
-                >
-                  {analyzing ? (
-                    <span className="flex items-center gap-2">
-                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                      {getLocalizedMessage('analyzeBtn', language)}...
-                    </span>
-                  ) : getLocalizedMessage('analyzeBtn', language)}
-                </button>
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <button 
+                    onClick={startListening}
+                    className={`bg-black/5 dark:bg-white/5 py-3 px-4 rounded-lg font-medium transition-colors border border-border flex items-center justify-center shrink-0 ${isListening ? 'text-red-500 bg-red-500/10 animate-pulse' : 'text-muted-foreground hover:bg-black/10 dark:hover:bg-white/10 hover:text-primary'}`}
+                    title={isListening ? "Listening..." : "Speak query"}
+                  >
+                    <Mic size={20} />
+                  </button>
+                  <button 
+                    onClick={analyzeImage}
+                    disabled={analyzing}
+                    className="flex-1 bg-primary hover:bg-emerald-600 text-primary-foreground py-3 px-4 rounded-lg font-bold transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] disabled:opacity-50 flex justify-center items-center gap-2 whitespace-nowrap"
+                  >
+                    {analyzing ? (
+                      <span className="flex items-center gap-2">
+                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                      </span>
+                    ) : getLocalizedMessage('analyzeBtn', language)}
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -278,6 +296,28 @@ export default function ImageAnalysisPage() {
                 </div>
                 <div className="bg-black/5 dark:bg-white/5 rounded-xl p-4 border border-border text-foreground leading-relaxed">
                   {result.insight}
+                </div>
+              </div>
+              
+              {/* Follow-up Chat Input */}
+              <div className="pt-4 border-t border-border mt-6">
+                <p className="text-sm text-muted-foreground mb-2 font-medium">Ask a follow-up question:</p>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && analyzeImage()}
+                    placeholder="e.g. Can I use neem oil instead?"
+                    className="flex-1 bg-black/5 dark:bg-white/5 border border-border rounded-lg px-4 py-2 text-foreground focus:outline-none focus:border-primary/50"
+                  />
+                  <button 
+                    onClick={() => analyzeImage()}
+                    disabled={!chatInput.trim() || analyzing}
+                    className="bg-primary hover:bg-emerald-600 text-primary-foreground px-4 py-2 rounded-lg font-bold transition-all disabled:opacity-50"
+                  >
+                    Ask
+                  </button>
                 </div>
               </div>
             </div>
